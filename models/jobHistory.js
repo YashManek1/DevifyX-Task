@@ -1,4 +1,4 @@
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 
 const JobHistorySchema = new mongoose.Schema({
   jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job", required: true },

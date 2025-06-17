@@ -17,7 +17,10 @@ app.use(
     credentials: true,
   })
 );
+
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 app.use("/users", userRoutes);
 
 connectMongoDb(process.env.MONGO_URI);

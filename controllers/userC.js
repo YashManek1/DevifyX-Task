@@ -22,7 +22,7 @@ export const registerUser = async (req, res) => {
       email,
       password: hashedPassword,
     });
-
+    await newUser.save();
     // Generate JWT token
     const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, {
       expiresIn: "1h",
