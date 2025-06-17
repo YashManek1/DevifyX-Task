@@ -9,4 +9,4 @@ const JobHistorySchema = new mongoose.Schema({
   retryCount: { type: Number, default: 0 },
 });
 
-module.exports = mongoose.model("JobHistory", JobHistorySchema);
+export default mongoose.model("JobHistory", JobHistorySchema);
