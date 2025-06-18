@@ -4,6 +4,7 @@ import connectMongoDb from "./config/connection.js";
 import cors from "cors";
 
 import userRoutes from "./routes/userR.js";
+import jobRoutes from "./routes/jobR.js";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/users", userRoutes);
+app.use("/jobs", jobRoutes);
 
 connectMongoDb(process.env.MONGO_URI);
 
