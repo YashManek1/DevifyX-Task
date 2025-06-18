@@ -5,11 +5,12 @@ import axios from "axios";
 import { exec } from "child_process";
 import { promisify } from "util";
 
-// In-memory store for scheduled jobs
-export const scheduledJobs = {}; // Exported for access in other modules if needed
+// In-memory store for scheduled jobs (always use string keys for consistency)
+export const scheduledJobs = {};
 
-const execAsync = promisify(exec); // Convert exec to promise-based
+const execAsync = promisify(exec);
 
+// CREATE JOB
 export const createJob = async (req, res) => {
   try {
     const { name, type, schedule, payload, enabled, retryLimit } = req.body;
@@ -21,15 +22,12 @@ export const createJob = async (req, res) => {
     if (!name || !type || !schedule || !payload) {
       return res.status(400).json({ message: "All fields are required" });
     }
-    // Validate job type
     if (!["http", "shell"].includes(type)) {
       return res.status(400).json({ message: "Invalid job type" });
     }
-    // Validate schedule format (basic validation, can be improved)
     if (!cron.validate(schedule)) {
       return res.status(400).json({ message: "Invalid cron schedule format" });
     }
-
     // Validate payload based on job type
     if (type === "http") {
       if (!payload.url || !payload.method) {
@@ -45,7 +43,6 @@ export const createJob = async (req, res) => {
       }
     }
 
-    // Create a new job instance
     const newJob = new jobModel({
       userId: user._id,
       name,
@@ -56,19 +53,19 @@ export const createJob = async (req, res) => {
       retryLimit,
     });
 
-    // Save the job to the database
     await newJob.save();
 
-    // Schedule the job using cron only if enabled
+    const jobIdStr = String(newJob._id);
+
     if (enabled !== false) {
-      // If already scheduled (should not be on create), stop it first
-      if (scheduledJobs[newJob._id]) {
-        scheduledJobs[newJob._id].stop();
-        delete scheduledJobs[newJob._id];
+      // Defensive: stop any previous schedule for this jobId
+      if (scheduledJobs[jobIdStr]) {
+        scheduledJobs[jobIdStr].stop();
+        delete scheduledJobs[jobIdStr];
       }
-      scheduledJobs[newJob._id] = cron.schedule(schedule, async () => {
+      scheduledJobs[jobIdStr] = cron.schedule(schedule, async () => {
         try {
-          console.log(`Executing job: ${name} (ID: ${newJob._id})`);
+          console.log(`Executing job: ${name} (ID: ${jobIdStr})`);
           if (type === "http") {
             await executeHttpJob(newJob);
           } else if (type === "shell") {
@@ -101,7 +98,6 @@ async function executeHttpJob(job) {
       headers,
     };
 
-    // Add body for POST, PUT, PATCH requests
     if (body && ["post", "put", "patch"].includes(method.toLowerCase())) {
       config.data = body;
     }
@@ -111,7 +107,6 @@ async function executeHttpJob(job) {
       status: response.status,
       statusText: response.statusText,
     });
-
     // TODO: Log to JobHistory with success status
     return response;
   } catch (error) {
@@ -142,6 +137,7 @@ async function executeShellJob(job) {
   }
 }
 
+// LIST JOBS
 export const getJobs = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -156,9 +152,10 @@ export const getJobs = async (req, res) => {
   }
 };
 
+// GET JOB BY ID
 export const getJobById = async (req, res) => {
   try {
-    const { jobId } = req.params; // Fix: was req.params.jobId
+    const { jobId } = req.params;
     const userId = req.user.id;
 
     const job = await jobModel
@@ -176,6 +173,7 @@ export const getJobById = async (req, res) => {
   }
 };
 
+// UPDATE JOB (with improved payload/type validation and type safety)
 export const updateJob = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -206,7 +204,7 @@ export const updateJob = async (req, res) => {
     }
     if (payload !== undefined) job.payload = payload;
 
-    // Validate payload if either type or payload changed
+    // Improved: validate payload matches type if either changes
     const effectiveType = type !== undefined ? type : job.type;
     const effectivePayload = payload !== undefined ? payload : job.payload;
     if (effectiveType === "http") {
@@ -226,10 +224,8 @@ export const updateJob = async (req, res) => {
     if (enabled !== undefined) job.enabled = enabled;
     if (retryLimit !== undefined) job.retryLimit = retryLimit;
 
-    // Save updated job
     await job.save();
 
-    // Always use string for jobId in scheduledJobs
     const jobIdStr = String(job._id);
 
     // Stop existing scheduled job if running
@@ -261,6 +257,7 @@ export const updateJob = async (req, res) => {
   }
 };
 
+// DELETE JOB
 export const deleteJob = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -271,13 +268,14 @@ export const deleteJob = async (req, res) => {
       return res.status(404).json({ message: "Job not found" });
     }
 
+    const jobIdStr = String(job._id);
+
     // Stop and remove cron job from memory if scheduled
-    if (scheduledJobs[jobId]) {
-      scheduledJobs[jobId].stop();
-      delete scheduledJobs[jobId];
+    if (scheduledJobs[jobIdStr]) {
+      scheduledJobs[jobIdStr].stop();
+      delete scheduledJobs[jobIdStr];
     }
 
-    // Delete the job from the database
     await jobModel.deleteOne({ _id: jobId, userId });
     return res.status(200).json({ message: "Job deleted successfully" });
   } catch (error) {
@@ -286,6 +284,7 @@ export const deleteJob = async (req, res) => {
   }
 };
 
+// TOGGLE JOB STATUS (enable/disable)
 export const toggleJobStatus = async (req, res) => {
   try {
     const { jobId } = req.params;
@@ -294,19 +293,19 @@ export const toggleJobStatus = async (req, res) => {
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
-    // Toggle the enabled status
-    job.enabled = !job.enabled;
 
-    // Save new status first
+    job.enabled = !job.enabled;
     await job.save();
 
+    const jobIdStr = String(job._id);
+
     if (job.enabled) {
-      // If enabling, stop any old and schedule new
-      if (scheduledJobs[jobId]) {
-        scheduledJobs[jobId].stop();
-        delete scheduledJobs[jobId];
+      // Stop any old schedule and start a new one
+      if (scheduledJobs[jobIdStr]) {
+        scheduledJobs[jobIdStr].stop();
+        delete scheduledJobs[jobIdStr];
       }
-      scheduledJobs[jobId] = cron.schedule(job.schedule, async () => {
+      scheduledJobs[jobIdStr] = cron.schedule(job.schedule, async () => {
         try {
           console.log(`Executing toggled job: ${job.name} (ID: ${job._id})`);
           if (job.type === "http") {
@@ -319,10 +318,10 @@ export const toggleJobStatus = async (req, res) => {
         }
       });
     } else {
-      // If disabling, stop and remove
-      if (scheduledJobs[jobId]) {
-        scheduledJobs[jobId].stop();
-        delete scheduledJobs[jobId];
+      // Stop and remove schedule
+      if (scheduledJobs[jobIdStr]) {
+        scheduledJobs[jobIdStr].stop();
+        delete scheduledJobs[jobIdStr];
       }
     }
     return res
