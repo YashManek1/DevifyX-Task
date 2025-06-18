@@ -1,4 +1,4 @@
-import userModel from "../models/userModel.js";
+import userModel from "../models/user.js";
 import jobModel from "../models/job.js";
 import cron from "node-cron";
 import axios from "axios";
@@ -205,21 +205,42 @@ export const updateJob = async (req, res) => {
       job.schedule = schedule;
     }
     if (payload !== undefined) job.payload = payload;
+
+    // Validate payload if either type or payload changed
+    const effectiveType = type !== undefined ? type : job.type;
+    const effectivePayload = payload !== undefined ? payload : job.payload;
+    if (effectiveType === "http") {
+      if (!effectivePayload.url || !effectivePayload.method) {
+        return res
+          .status(400)
+          .json({ message: "HTTP jobs require url and method in payload" });
+      }
+    } else if (effectiveType === "shell") {
+      if (!effectivePayload.command) {
+        return res
+          .status(400)
+          .json({ message: "Shell jobs require command in payload" });
+      }
+    }
+
     if (enabled !== undefined) job.enabled = enabled;
     if (retryLimit !== undefined) job.retryLimit = retryLimit;
 
     // Save updated job
     await job.save();
 
+    // Always use string for jobId in scheduledJobs
+    const jobIdStr = String(job._id);
+
     // Stop existing scheduled job if running
-    if (scheduledJobs[jobId]) {
-      scheduledJobs[jobId].stop();
-      delete scheduledJobs[jobId];
+    if (scheduledJobs[jobIdStr]) {
+      scheduledJobs[jobIdStr].stop();
+      delete scheduledJobs[jobIdStr];
     }
 
     // Reschedule the job if enabled
     if (job.enabled) {
-      scheduledJobs[jobId] = cron.schedule(job.schedule, async () => {
+      scheduledJobs[jobIdStr] = cron.schedule(job.schedule, async () => {
         try {
           console.log(`Executing updated job: ${job.name} (ID: ${job._id})`);
           if (job.type === "http") {
