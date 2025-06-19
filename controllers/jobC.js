@@ -4,11 +4,29 @@ import cron from "node-cron";
 import axios from "axios";
 import { exec } from "child_process";
 import { promisify } from "util";
+import jobHistoryModel from "../models/jobHistory.js";
 
 // In-memory store for scheduled jobs (always use string keys for consistency)
 export const scheduledJobs = {};
 
 const execAsync = promisify(exec);
+
+// Helper function for retries
+async function withRetries(job, execFunc) {
+  const retryLimit = job.retryLimit || 0;
+  let lastError = null;
+
+  for (let attempt = 0; attempt <= retryLimit; attempt++) {
+    try {
+      const result = await execFunc(attempt);
+      return result;
+    } catch (err) {
+      lastError = err;
+      if (attempt === retryLimit) throw err; // Re-throw on last attempt
+    }
+  }
+  throw lastError;
+}
 
 // CREATE JOB
 export const createJob = async (req, res) => {
@@ -58,7 +76,6 @@ export const createJob = async (req, res) => {
     const jobIdStr = String(newJob._id);
 
     if (enabled !== false) {
-      // Defensive: stop any previous schedule for this jobId
       if (scheduledJobs[jobIdStr]) {
         scheduledJobs[jobIdStr].stop();
         delete scheduledJobs[jobIdStr];
@@ -67,13 +84,16 @@ export const createJob = async (req, res) => {
         try {
           console.log(`Executing job: ${name} (ID: ${jobIdStr})`);
           if (type === "http") {
-            await executeHttpJob(newJob);
+            await withRetries(newJob, (retryCount) =>
+              executeHttpJob(newJob, retryCount)
+            );
           } else if (type === "shell") {
-            await executeShellJob(newJob);
+            await withRetries(newJob, (retryCount) =>
+              executeShellJob(newJob, retryCount)
+            );
           }
         } catch (error) {
           console.error(`Error executing job ${name}:`, error);
-          // TODO: Log to JobHistory with failure status
         }
       });
     }
@@ -87,8 +107,8 @@ export const createJob = async (req, res) => {
   }
 };
 
-// Helper function to execute HTTP jobs
-async function executeHttpJob(job) {
+// Helper function to execute HTTP jobs with retries and logging
+export async function executeHttpJob(job, retryCount = 0) {
   const { url, method, headers = {}, body } = job.payload;
 
   try {
@@ -103,36 +123,66 @@ async function executeHttpJob(job) {
     }
 
     const response = await axios(config);
-    console.log(`HTTP Job ${job.name} executed successfully:`, {
-      status: response.status,
-      statusText: response.statusText,
+    await jobHistoryModel.create({
+      jobId: job._id,
+      status: "success",
+      output: {
+        status: response.status,
+        statusText: response.statusText,
+        data: response.data,
+        headers: response.headers,
+      },
+      retryCount,
     });
-    // TODO: Log to JobHistory with success status
+    console.log(`HTTP Job ${job.name} executed successfully:`, response.data);
+
     return response;
   } catch (error) {
     console.error(`HTTP Job ${job.name} failed:`, error.message);
-    // TODO: Implement retry logic based on retryLimit
+    await jobHistoryModel.create({
+      jobId: job._id,
+      status: "failure",
+      error: error.toString(),
+      output: error.response
+        ? {
+            status: error.response.status,
+            data: error.response.data,
+            headers: error.response.headers,
+          }
+        : null,
+      retryCount,
+    });
     throw error;
   }
 }
 
-// Helper function to execute shell jobs
-async function executeShellJob(job) {
+// Helper function to execute shell jobs with retries and logging
+export async function executeShellJob(job, retryCount = 0) {
   const { command } = job.payload;
-
   try {
     const { stdout, stderr } = await execAsync(command);
 
     if (stderr) {
       console.warn(`Shell Job ${job.name} stderr:`, stderr);
     }
-
+    await jobHistoryModel.create({
+      jobId: job._id,
+      status: "success",
+      output: { stdout, stderr },
+      retryCount,
+    });
     console.log(`Shell Job ${job.name} executed successfully:`, stdout);
-    // TODO: Log to JobHistory with success status
+
     return { stdout, stderr };
   } catch (error) {
     console.error(`Shell Job ${job.name} failed:`, error.message);
-    // TODO: Implement retry logic based on retryLimit
+    await jobHistoryModel.create({
+      jobId: job._id,
+      status: "failure",
+      error: error.toString(),
+      output: null,
+      retryCount,
+    });
     throw error;
   }
 }
@@ -240,9 +290,13 @@ export const updateJob = async (req, res) => {
         try {
           console.log(`Executing updated job: ${job.name} (ID: ${job._id})`);
           if (job.type === "http") {
-            await executeHttpJob(job);
+            await withRetries(job, (retryCount) =>
+              executeHttpJob(job, retryCount)
+            );
           } else if (job.type === "shell") {
-            await executeShellJob(job);
+            await withRetries(job, (retryCount) =>
+              executeShellJob(job, retryCount)
+            );
           }
         } catch (error) {
           console.error(`Error executing updated job ${job.name}:`, error);
@@ -309,9 +363,13 @@ export const toggleJobStatus = async (req, res) => {
         try {
           console.log(`Executing toggled job: ${job.name} (ID: ${job._id})`);
           if (job.type === "http") {
-            await executeHttpJob(job);
+            await withRetries(job, (retryCount) =>
+              executeHttpJob(job, retryCount)
+            );
           } else if (job.type === "shell") {
-            await executeShellJob(job);
+            await withRetries(job, (retryCount) =>
+              executeShellJob(job, retryCount)
+            );
           }
         } catch (error) {
           console.error(`Error executing toggled job ${job.name}:`, error);
