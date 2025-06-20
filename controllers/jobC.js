@@ -134,6 +134,7 @@ export async function executeHttpJob(job, retryCount = 0) {
         headers: response.headers,
       },
       retryCount,
+      orgId: job.orgId,
     });
     console.log(`HTTP Job ${job.name} executed successfully:`, response.data);
 
@@ -169,6 +170,7 @@ export async function executeHttpJob(job, retryCount = 0) {
       error: error.toString(),
       output,
       retryCount,
+      orgId: job.orgId,
     });
 
     if (job.webhookUrl) {
@@ -398,7 +400,7 @@ export const deleteJob = async (req, res) => {
       delete scheduledJobs[jobIdStr];
     }
 
-    await jobModel.deleteOne({ _id: jobId, userId });
+    await jobModel.deleteOne({ _id: jobId, userId, orgId: req.user.orgId });
     return res.status(200).json({ message: "Job deleted successfully" });
   } catch (error) {
     console.error("Error deleting job:", error);
