@@ -33,6 +33,7 @@ const JobSchema = new mongoose.Schema({
     ref: "Organization",
     required: true,
   },
+  dependsOn: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
 });
 
 export default mongoose.model("Job", JobSchema);

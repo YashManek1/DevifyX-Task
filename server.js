@@ -43,7 +43,9 @@ app.use("/users", userRoutes);
 app.use("/jobs", jobRoutes);
 
 async function scheduleExistingJobsOnStartup() {
-  const jobs = await jobModel.find({ enabled: true });
+  const jobs = await jobModel
+    .find({ enabled: true })
+    .populate("dependsOn", "name");
   for (const job of jobs) {
     const jobIdStr = String(job._id);
     if (scheduledJobs[jobIdStr]) {
@@ -52,6 +54,23 @@ async function scheduleExistingJobsOnStartup() {
     }
     scheduledJobs[jobIdStr] = cron.schedule(job.schedule, async () => {
       try {
+        console.log(
+          `Checking dependencies for job: ${job.name} (ID: ${jobIdStr})`
+        );
+
+        // Import the dependency check function
+        const { checkDependenciesReady } = await import(
+          "./controllers/jobC.js"
+        );
+        const dependenciesReady = await checkDependenciesReady(job.dependsOn);
+
+        if (!dependenciesReady.ready) {
+          console.log(
+            `Skipping job ${job.name}: Dependencies not ready - ${dependenciesReady.reason}`
+          );
+          return;
+        }
+
         console.log(`Executing job: ${job.name} (ID: ${jobIdStr})`);
         if (job.type === "http") {
           await executeHttpJob(job);

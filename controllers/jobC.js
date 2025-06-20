@@ -5,6 +5,7 @@ import axios from "axios";
 import { exec } from "child_process";
 import { promisify } from "util";
 import jobHistoryModel from "../models/jobHistory.js";
+import mongoose from "mongoose";
 
 // In-memory store for scheduled jobs (always use string keys for consistency)
 export const scheduledJobs = {};
@@ -31,8 +32,16 @@ async function withRetries(job, execFunc) {
 // CREATE JOB
 export const createJob = async (req, res) => {
   try {
-    const { name, type, schedule, payload, enabled, retryLimit, webhookUrl } =
-      req.body;
+    const {
+      name,
+      type,
+      schedule,
+      payload,
+      enabled,
+      retryLimit,
+      webhookUrl,
+      dependsOn,
+    } = req.body;
     const userId = req.user.id;
     const user = await userModel.findById(userId);
     if (!user) {
@@ -47,6 +56,7 @@ export const createJob = async (req, res) => {
     if (!cron.validate(schedule)) {
       return res.status(400).json({ message: "Invalid cron schedule format" });
     }
+
     // Validate payload based on job type
     if (type === "http") {
       if (!payload.url || !payload.method) {
@@ -62,6 +72,15 @@ export const createJob = async (req, res) => {
       }
     }
 
+    // Validate dependencies if provided
+    const validatedDependencies = await validateDependencies(
+      dependsOn,
+      user.orgId
+    );
+    if (validatedDependencies.error) {
+      return res.status(400).json({ message: validatedDependencies.error });
+    }
+
     const newJob = new jobModel({
       userId: user._id,
       name,
@@ -72,7 +91,19 @@ export const createJob = async (req, res) => {
       retryLimit,
       webhookUrl,
       orgId: user.orgId,
+      dependsOn: validatedDependencies.dependencies,
     });
+
+    // Check for circular dependencies
+    const circularCheck = await checkCircularDependency(
+      newJob._id,
+      validatedDependencies.dependencies
+    );
+    if (circularCheck.isCircular) {
+      return res.status(400).json({
+        message: `Circular dependency detected: ${circularCheck.path}`,
+      });
+    }
 
     await newJob.save();
 
@@ -83,8 +114,24 @@ export const createJob = async (req, res) => {
         scheduledJobs[jobIdStr].stop();
         delete scheduledJobs[jobIdStr];
       }
+
       scheduledJobs[jobIdStr] = cron.schedule(schedule, async () => {
         try {
+          console.log(
+            `Checking dependencies for job: ${name} (ID: ${jobIdStr})`
+          );
+
+          // Check dependencies before execution
+          const dependenciesReady = await checkDependenciesReady(
+            newJob.dependsOn
+          );
+          if (!dependenciesReady.ready) {
+            console.log(
+              `Skipping job ${name}: Dependencies not ready - ${dependenciesReady.reason}`
+            );
+            return;
+          }
+
           console.log(`Executing job: ${name} (ID: ${jobIdStr})`);
           if (type === "http") {
             await withRetries(newJob, (retryCount) =>
@@ -286,21 +333,22 @@ export const getJobById = async (req, res) => {
   }
 };
 
-// UPDATE JOB - Remove userId filter  
+// UPDATE JOB - Remove userId filter
 export const updateJob = async (req, res) => {
   try {
     const { jobId } = req.params;
 
     const job = await jobModel.findOne({
       _id: jobId,
-      orgId: req.user.orgId, // Remove userId
+      orgId: req.user.orgId,
     });
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
 
     // Only update fields if they are provided
-    const { name, type, schedule, payload, enabled, retryLimit } = req.body;
+    const { name, type, schedule, payload, enabled, retryLimit, dependsOn } =
+      req.body;
 
     if (name !== undefined) job.name = name;
     if (type !== undefined) {
@@ -318,6 +366,30 @@ export const updateJob = async (req, res) => {
       job.schedule = schedule;
     }
     if (payload !== undefined) job.payload = payload;
+
+    // Validate and update dependencies
+    if (dependsOn !== undefined) {
+      const validatedDependencies = await validateDependencies(
+        dependsOn,
+        req.user.orgId
+      );
+      if (validatedDependencies.error) {
+        return res.status(400).json({ message: validatedDependencies.error });
+      }
+
+      // Check for circular dependencies with updated dependencies
+      const circularCheck = await checkCircularDependency(
+        job._id,
+        validatedDependencies.dependencies
+      );
+      if (circularCheck.isCircular) {
+        return res.status(400).json({
+          message: `Circular dependency detected: ${circularCheck.path}`,
+        });
+      }
+
+      job.dependsOn = validatedDependencies.dependencies;
+    }
 
     // Improved: validate payload matches type if either changes
     const effectiveType = type !== undefined ? type : job.type;
@@ -353,6 +425,19 @@ export const updateJob = async (req, res) => {
     if (job.enabled) {
       scheduledJobs[jobIdStr] = cron.schedule(job.schedule, async () => {
         try {
+          console.log(
+            `Checking dependencies for updated job: ${job.name} (ID: ${job._id})`
+          );
+
+          // Check dependencies before execution
+          const dependenciesReady = await checkDependenciesReady(job.dependsOn);
+          if (!dependenciesReady.ready) {
+            console.log(
+              `Skipping updated job ${job.name}: Dependencies not ready - ${dependenciesReady.reason}`
+            );
+            return;
+          }
+
           console.log(`Executing updated job: ${job.name} (ID: ${job._id})`);
           if (job.type === "http") {
             await withRetries(job, (retryCount) =>
@@ -463,3 +548,110 @@ export const toggleJobStatus = async (req, res) => {
     return res.status(500).json({ message: "Internal server error" });
   }
 };
+
+// Helper function to validate dependencies
+async function validateDependencies(dependsOn, orgId) {
+  if (!dependsOn || !Array.isArray(dependsOn) || dependsOn.length === 0) {
+    return { dependencies: [], error: null };
+  }
+
+  // Check if all dependency IDs are valid ObjectIds
+  const invalidIds = dependsOn.filter(
+    (id) => !mongoose.Types.ObjectId.isValid(id)
+  );
+  if (invalidIds.length > 0) {
+    return {
+      dependencies: [],
+      error: `Invalid job IDs in dependencies: ${invalidIds.join(", ")}`,
+    };
+  }
+
+  // Check if all dependencies exist and belong to the same organization
+  const dependencyJobs = await jobModel.find({
+    _id: { $in: dependsOn },
+    orgId: orgId,
+  });
+
+  if (dependencyJobs.length !== dependsOn.length) {
+    const foundIds = dependencyJobs.map((job) => job._id.toString());
+    const missingIds = dependsOn.filter((id) => !foundIds.includes(id));
+    return {
+      dependencies: [],
+      error: `Dependency jobs not found or not in same organization: ${missingIds.join(
+        ", "
+      )}`,
+    };
+  }
+
+  return { dependencies: dependsOn, error: null };
+}
+
+// Helper function to check circular dependencies
+async function checkCircularDependency(
+  jobId,
+  dependencies,
+  visited = new Set(),
+  path = []
+) {
+  const jobIdStr = jobId.toString();
+
+  if (visited.has(jobIdStr)) {
+    return {
+      isCircular: true,
+      path: [...path, jobIdStr].join(" -> "),
+    };
+  }
+
+  visited.add(jobIdStr);
+  path.push(jobIdStr);
+
+  for (const depId of dependencies) {
+    const depIdStr = depId.toString();
+    const depJob = await jobModel.findById(depId).select("dependsOn");
+
+    if (depJob && depJob.dependsOn && depJob.dependsOn.length > 0) {
+      const result = await checkCircularDependency(
+        depId,
+        depJob.dependsOn,
+        new Set(visited),
+        [...path]
+      );
+      if (result.isCircular) {
+        return result;
+      }
+    }
+  }
+
+  return { isCircular: false, path: null };
+}
+
+// Helper function to check if dependencies are ready
+export async function checkDependenciesReady(dependsOn) {
+  if (!dependsOn || dependsOn.length === 0) {
+    return { ready: true, reason: null };
+  }
+
+  // Check the latest execution status for each dependency
+  for (const depJobId of dependsOn) {
+    const latestHistory = await jobHistoryModel
+      .findOne({ jobId: depJobId })
+      .sort({ executedAt: -1 })
+      .limit(1);
+
+    if (!latestHistory) {
+      return {
+        ready: false,
+        reason: `Dependency job ${depJobId} has never been executed`,
+      };
+    }
+
+    if (latestHistory.status !== "success") {
+      return {
+        ready: false,
+        reason: `Dependency job ${depJobId} last execution failed`,
+      };
+    }
+  }
+
+  return { ready: true, reason: null };
+}
