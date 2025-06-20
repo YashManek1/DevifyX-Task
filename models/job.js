@@ -27,6 +27,7 @@ const JobSchema = new mongoose.Schema({
   retryLimit: { type: Number, default: 0 }, // number of retries on failure
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
+  webhookUrl: { type: String, default: null },
 });
 
 export default mongoose.model("Job", JobSchema);

@@ -31,7 +31,7 @@ async function withRetries(job, execFunc) {
 // CREATE JOB
 export const createJob = async (req, res) => {
   try {
-    const { name, type, schedule, payload, enabled, retryLimit } = req.body;
+    const { name, type, schedule, payload, enabled, retryLimit, webhookUrl } = req.body; // Add webhookUrl here
     const userId = req.user.id;
     const user = await userModel.findById(userId);
     if (!user) {
@@ -69,6 +69,7 @@ export const createJob = async (req, res) => {
       payload,
       enabled,
       retryLimit,
+      webhookUrl,
     });
 
     await newJob.save();
@@ -117,13 +118,11 @@ export async function executeHttpJob(job, retryCount = 0) {
       url,
       headers,
     };
-
     if (body && ["post", "put", "patch"].includes(method.toLowerCase())) {
       config.data = body;
     }
-
     const response = await axios(config);
-    await jobHistoryModel.create({
+    const jobHistory = await jobHistoryModel.create({
       jobId: job._id,
       status: "success",
       output: {
@@ -136,22 +135,54 @@ export async function executeHttpJob(job, retryCount = 0) {
     });
     console.log(`HTTP Job ${job.name} executed successfully:`, response.data);
 
+    if (job.webhookUrl) {
+      try {
+        await axios.post(job.webhookUrl, {
+          jobId: job._id,
+          status: "success",
+          output: jobHistory.output,
+          executedAt: jobHistory.executedAt,
+          retryCount,
+        });
+      } catch (whErr) {
+        console.warn("Webhook call (success) failed:", whErr.message);
+      }
+    }
+
     return response;
   } catch (error) {
     console.error(`HTTP Job ${job.name} failed:`, error.message);
-    await jobHistoryModel.create({
+
+    const output = error.response
+      ? {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers,
+        }
+      : null;
+
+    const jobHistory = await jobHistoryModel.create({
       jobId: job._id,
       status: "failure",
       error: error.toString(),
-      output: error.response
-        ? {
-            status: error.response.status,
-            data: error.response.data,
-            headers: error.response.headers,
-          }
-        : null,
+      output,
       retryCount,
     });
+
+    if (job.webhookUrl) {
+      try {
+        await axios.post(job.webhookUrl, {
+          jobId: job._id,
+          status: "failure",
+          error: error.toString(),
+          output,
+          executedAt: jobHistory.executedAt,
+          retryCount,
+        });
+      } catch (whErr) {
+        console.warn("Webhook call (failure) failed:", whErr.message);
+      }
+    }
     throw error;
   }
 }
@@ -165,24 +196,51 @@ export async function executeShellJob(job, retryCount = 0) {
     if (stderr) {
       console.warn(`Shell Job ${job.name} stderr:`, stderr);
     }
-    await jobHistoryModel.create({
+    const jobHistory = await jobHistoryModel.create({
       jobId: job._id,
       status: "success",
       output: { stdout, stderr },
       retryCount,
     });
+    if (job.webhookUrl) {
+      try {
+        await axios.post(job.webhookUrl, {
+          jobId: job._id,
+          status: "success",
+          output: jobHistory.output,
+          executedAt: jobHistory.executedAt,
+          retryCount,
+        });
+      } catch (whErr) {
+        console.warn("Webhook call (success) failed:", whErr.message);
+      }
+    }
     console.log(`Shell Job ${job.name} executed successfully:`, stdout);
 
     return { stdout, stderr };
   } catch (error) {
     console.error(`Shell Job ${job.name} failed:`, error.message);
-    await jobHistoryModel.create({
+    const jobHistory = await jobHistoryModel.create({
       jobId: job._id,
       status: "failure",
       error: error.toString(),
       output: null,
       retryCount,
     });
+    if (job.webhookUrl) {
+      try {
+        await axios.post(job.webhookUrl, {
+          jobId: job._id,
+          status: "failure",
+          error: error.toString(),
+          output: null,
+          executedAt: jobHistory.executedAt,
+          retryCount,
+        });
+      } catch (whErr) {
+        console.warn("Webhook call (failure) failed:", whErr.message);
+      }
+    }
     throw error;
   }
 }

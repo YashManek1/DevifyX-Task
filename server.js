@@ -3,6 +3,7 @@ import express from "express";
 import connectMongoDb from "./config/connection.js";
 import cors from "cors";
 import cron from "node-cron";
+import rateLimit from "express-rate-limit";
 
 import jobModel from "./models/job.js";
 import {
@@ -16,6 +17,16 @@ import jobRoutes from "./routes/jobR.js";
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: "Too many requests from this IP, please try again later.",
+});
+
+app.use(apiLimiter);
 
 app.use(
   cors({
