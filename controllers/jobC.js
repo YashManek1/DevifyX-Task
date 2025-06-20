@@ -205,6 +205,7 @@ export async function executeShellJob(job, retryCount = 0) {
       status: "success",
       output: { stdout, stderr },
       retryCount,
+      orgId: job.orgId,
     });
     if (job.webhookUrl) {
       try {
@@ -230,6 +231,7 @@ export async function executeShellJob(job, retryCount = 0) {
       error: error.toString(),
       output: null,
       retryCount,
+      orgId: job.orgId,
     });
     if (job.webhookUrl) {
       try {
@@ -254,7 +256,7 @@ export const getJobs = async (req, res) => {
   try {
     const userId = req.user.id;
     const jobs = await jobModel
-      .find({ userId, orgId: req.user.orgId }) // Ensure jobs are scoped to user's organization
+      .find({ orgId: req.user.orgId }) // Ensure jobs are scoped to user's organization
       .populate("userId", "username email");
 
     return res.status(200).json(jobs);
@@ -264,14 +266,13 @@ export const getJobs = async (req, res) => {
   }
 };
 
-// GET JOB BY ID
+// GET JOB BY ID - Remove userId filter
 export const getJobById = async (req, res) => {
   try {
     const { jobId } = req.params;
-    const userId = req.user.id;
 
     const job = await jobModel
-      .findOne({ _id: jobId, userId, orgId: req.user.orgId })
+      .findOne({ _id: jobId, orgId: req.user.orgId }) // Remove userId
       .populate("userId", "username email");
 
     if (!job) {
@@ -285,16 +286,14 @@ export const getJobById = async (req, res) => {
   }
 };
 
-// UPDATE JOB (with improved payload/type validation and type safety)
+// UPDATE JOB - Remove userId filter  
 export const updateJob = async (req, res) => {
   try {
     const { jobId } = req.params;
-    const userId = req.user.id;
 
     const job = await jobModel.findOne({
       _id: jobId,
-      userId,
-      orgId: req.user.orgId,
+      orgId: req.user.orgId, // Remove userId
     });
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
