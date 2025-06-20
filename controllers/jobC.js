@@ -31,7 +31,8 @@ async function withRetries(job, execFunc) {
 // CREATE JOB
 export const createJob = async (req, res) => {
   try {
-    const { name, type, schedule, payload, enabled, retryLimit, webhookUrl } = req.body; // Add webhookUrl here
+    const { name, type, schedule, payload, enabled, retryLimit, webhookUrl } =
+      req.body;
     const userId = req.user.id;
     const user = await userModel.findById(userId);
     if (!user) {
@@ -70,6 +71,7 @@ export const createJob = async (req, res) => {
       enabled,
       retryLimit,
       webhookUrl,
+      orgId: user.orgId,
     });
 
     await newJob.save();
@@ -250,7 +252,7 @@ export const getJobs = async (req, res) => {
   try {
     const userId = req.user.id;
     const jobs = await jobModel
-      .find({ userId })
+      .find({ userId, orgId: req.user.orgId }) // Ensure jobs are scoped to user's organization
       .populate("userId", "username email");
 
     return res.status(200).json(jobs);
@@ -267,7 +269,7 @@ export const getJobById = async (req, res) => {
     const userId = req.user.id;
 
     const job = await jobModel
-      .findOne({ _id: jobId, userId })
+      .findOne({ _id: jobId, userId, orgId: req.user.orgId })
       .populate("userId", "username email");
 
     if (!job) {
@@ -287,7 +289,11 @@ export const updateJob = async (req, res) => {
     const { jobId } = req.params;
     const userId = req.user.id;
 
-    const job = await jobModel.findOne({ _id: jobId, userId });
+    const job = await jobModel.findOne({
+      _id: jobId,
+      userId,
+      orgId: req.user.orgId,
+    });
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
@@ -375,7 +381,11 @@ export const deleteJob = async (req, res) => {
     const { jobId } = req.params;
     const userId = req.user.id;
 
-    const job = await jobModel.findOne({ _id: jobId, userId });
+    const job = await jobModel.findOne({
+      _id: jobId,
+      userId,
+      orgId: req.user.orgId,
+    });
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }
@@ -401,7 +411,11 @@ export const toggleJobStatus = async (req, res) => {
   try {
     const { jobId } = req.params;
     const userId = req.user.id;
-    const job = await jobModel.findOne({ _id: jobId, userId });
+    const job = await jobModel.findOne({
+      _id: jobId,
+      userId,
+      orgId: req.user.orgId,
+    });
     if (!job) {
       return res.status(404).json({ message: "Job not found" });
     }

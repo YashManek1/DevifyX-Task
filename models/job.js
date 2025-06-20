@@ -28,6 +28,11 @@ const JobSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
   webhookUrl: { type: String, default: null },
+  orgId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+  },
 });
 
 export default mongoose.model("Job", JobSchema);

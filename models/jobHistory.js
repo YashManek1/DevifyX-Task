@@ -7,6 +7,11 @@ const JobHistorySchema = new mongoose.Schema({
   output: { type: mongoose.Schema.Types.Mixed }, // stdout for shell, response for http
   error: { type: mongoose.Schema.Types.Mixed }, // error details if failed
   retryCount: { type: Number, default: 0 },
+  orgId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Organization",
+    required: true,
+  },
 });
 
 export default mongoose.model("JobHistory", JobHistorySchema);
