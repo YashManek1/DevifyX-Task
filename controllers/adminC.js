@@ -2,11 +2,12 @@ import userModel from "../models/user.js";
 import jobModel from "../models/job.js";
 import jobHistoryModel from "../models/jobHistory.js";
 import orgModel from "../models/organization.js";
+import mongoose from "mongoose";
 
 export const HealthCheck = async (req, res) => {
   try {
     // Check MongoDB connection state (0: disconnected, 1: connected, 2: connecting, 3: disconnecting)
-    const dbState = req.app.get("mongoose")?.connection?.readyState;
+    const dbState = mongoose.connection.readyState;
     const dbConnected = dbState === 1;
 
     // Try a simple query as well (optional, ensures queries work)
@@ -40,7 +41,7 @@ export const jobStats = async (req, res) => {
     const jobsByOrgAgg = await jobModel.aggregate([
       { $group: { _id: "$orgId", count: { $sum: 1 } } },
     ]);
-    
+
     const jobsByOrg = await Promise.all(
       jobsByOrgAgg.map(async (org) => {
         const orgDoc = await orgModel.findById(org._id);
