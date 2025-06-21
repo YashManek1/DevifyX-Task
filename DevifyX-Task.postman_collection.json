@@ -1,0 +1,458 @@
+{
+	"info": {
+		"_postman_id": "42442052-e214-496b-a113-1d315c6ec388",
+		"name": "DevifyX-Task",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "34552196"
+	},
+	"item": [
+		{
+			"name": "User",
+			"item": [
+				{
+					"name": "Register",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "yashmanek2001@gmail.com",
+									"type": "text"
+								},
+								{
+									"key": "username",
+									"value": "YashManek",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "Yash@2005",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:3000/users/register",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"users",
+								"register"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Login",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "email",
+									"value": "yashmanek2001@gmail.com",
+									"type": "text"
+								},
+								{
+									"key": "password",
+									"value": "Yash@2005",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "http://localhost:3000/users/login",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"users",
+								"login"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Job",
+			"item": [
+				{
+					"name": "Create Job",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTFkMTdiNWVkZjVmMGIwYjljMjMyYiIsImlhdCI6MTc1MDM0NDc5NiwiZXhwIjoxNzUwMzQ4Mzk2fQ.PSaNGOsAMcFkHVl43q-PWYxoMnfGqmfP39_eCHCZBzM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"name\": \"Windows Dir Command2\",\r\n    \"type\": \"shell\", \r\n    \"schedule\": \"*/5 * * * * *\",\r\n    \"payload\": {\r\n        \"command\": \"dir C:\\\\\"\r\n    },\r\n    \"enabled\": false,\r\n    \"retryLimit\": 0\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/jobs/createJob",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"jobs",
+								"createJob"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Jobs",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTFkMTdiNWVkZjVmMGIwYjljMjMyYiIsImlhdCI6MTc1MDM0NDc5NiwiZXhwIjoxNzUwMzQ4Mzk2fQ.PSaNGOsAMcFkHVl43q-PWYxoMnfGqmfP39_eCHCZBzM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/jobs/getJobs",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"jobs",
+								"getJobs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Job By ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTFkMTdiNWVkZjVmMGIwYjljMjMyYiIsImlhdCI6MTc1MDM0NDc5NiwiZXhwIjoxNzUwMzQ4Mzk2fQ.PSaNGOsAMcFkHVl43q-PWYxoMnfGqmfP39_eCHCZBzM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/jobs/getJobById/685424f71519a1b880e3d396",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"jobs",
+								"getJobById",
+								"685424f71519a1b880e3d396"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Job",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTFkMTdiNWVkZjVmMGIwYjljMjMyYiIsImlhdCI6MTc1MDM0NDc5NiwiZXhwIjoxNzUwMzQ4Mzk2fQ.PSaNGOsAMcFkHVl43q-PWYxoMnfGqmfP39_eCHCZBzM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n    \"type\": \"shell\",\r\n    \"payload\": {\r\n        \"command\": \"echo 'Changed from HTTP to Shell'\"\r\n    }\r\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:3000/jobs/updateJob/685424f71519a1b880e3d396",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"jobs",
+								"updateJob",
+								"685424f71519a1b880e3d396"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle enable status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTFkMTdiNWVkZjVmMGIwYjljMjMyYiIsImlhdCI6MTc1MDM0NDc5NiwiZXhwIjoxNzUwMzQ4Mzk2fQ.PSaNGOsAMcFkHVl43q-PWYxoMnfGqmfP39_eCHCZBzM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PATCH",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/jobs/toggleJobStatus/6854278d29131b605c32152b",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"jobs",
+								"toggleJobStatus",
+								"6854278d29131b605c32152b"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Job",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTFkMTdiNWVkZjVmMGIwYjljMjMyYiIsImlhdCI6MTc1MDM0NDc5NiwiZXhwIjoxNzUwMzQ4Mzk2fQ.PSaNGOsAMcFkHVl43q-PWYxoMnfGqmfP39_eCHCZBzM",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/jobs/deleteJob/685424f71519a1b880e3d396",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"jobs",
+								"deleteJob",
+								"685424f71519a1b880e3d396"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTU0NDU5MWEyM2NkN2FhZjllYjBhNyIsIm9yZ0lkIjoiNjg1NTQ0NTkxYTIzY2Q3YWFmOWViMGE1IiwidXNlcm5hbWUiOiJZYXNoTWFuZWsiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA1MDU1NjcsImV4cCI6MTc1MDUwOTE2N30.esD0rwZP2bbu1ciUhvfEGEQr1JSsPXp9RA9QZ-UR1S8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/admin/health",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"admin",
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Job stats",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTU0NDU5MWEyM2NkN2FhZjllYjBhNyIsIm9yZ0lkIjoiNjg1NTQ0NTkxYTIzY2Q3YWFmOWViMGE1IiwidXNlcm5hbWUiOiJZYXNoTWFuZWsiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA1MDU1NjcsImV4cCI6MTc1MDUwOTE2N30.esD0rwZP2bbu1ciUhvfEGEQr1JSsPXp9RA9QZ-UR1S8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/admin/job-stats",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"admin",
+								"job-stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "User Stats",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTU0NDU5MWEyM2NkN2FhZjllYjBhNyIsIm9yZ0lkIjoiNjg1NTQ0NTkxYTIzY2Q3YWFmOWViMGE1IiwidXNlcm5hbWUiOiJZYXNoTWFuZWsiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA1MDU1NjcsImV4cCI6MTc1MDUwOTE2N30.esD0rwZP2bbu1ciUhvfEGEQr1JSsPXp9RA9QZ-UR1S8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/admin/user-stats",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"admin",
+								"user-stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All jobs",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTU0NDU5MWEyM2NkN2FhZjllYjBhNyIsIm9yZ0lkIjoiNjg1NTQ0NTkxYTIzY2Q3YWFmOWViMGE1IiwidXNlcm5hbWUiOiJZYXNoTWFuZWsiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA1MDU1NjcsImV4cCI6MTc1MDUwOTE2N30.esD0rwZP2bbu1ciUhvfEGEQr1JSsPXp9RA9QZ-UR1S8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/admin/all-jobs",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"admin",
+								"all-jobs"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "All users",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4NTU0NDU5MWEyM2NkN2FhZjllYjBhNyIsIm9yZ0lkIjoiNjg1NTQ0NTkxYTIzY2Q3YWFmOWViMGE1IiwidXNlcm5hbWUiOiJZYXNoTWFuZWsiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NTA1MDU1NjcsImV4cCI6MTc1MDUwOTE2N30.esD0rwZP2bbu1ciUhvfEGEQr1JSsPXp9RA9QZ-UR1S8",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:3000/admin/all-users",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "3000",
+							"path": [
+								"admin",
+								"all-users"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
