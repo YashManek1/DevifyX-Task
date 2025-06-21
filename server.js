@@ -13,6 +13,7 @@ import {
 } from "./controllers/jobC.js";
 import userRoutes from "./routes/userR.js";
 import jobRoutes from "./routes/jobR.js";
+import adminRoutes from "./routes/adminR.js";
 
 dotenv.config();
 const app = express();
@@ -41,6 +42,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/users", userRoutes);
 app.use("/jobs", jobRoutes);
+app.use("/admin", adminRoutes);
 
 async function scheduleExistingJobsOnStartup() {
   const jobs = await jobModel
