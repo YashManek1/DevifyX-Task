@@ -84,7 +84,7 @@ Server runs on `http://localhost:3000` by default.
 
 ## 🧪 **Testing the API**
 
-- Use the provided [Postman Collection](./DevifyX-Postman-Collection.json)  
+- Use the provided [Postman Collection](./DevifyX-Task.postman_collection.json)  
 - Import into Postman to try all endpoints easily
 
 ---
@@ -139,19 +139,6 @@ Admin users can access special endpoints:
 ├── swagger.yaml
 └── ...
 ```
-
----
-
-## 🤝 **Contributing**
-
-PRs, issues, and suggestions welcome!
-
----
-
-## 📄 **License**
-
-MIT
-
 ---
 
 ## 👤 **Author**
