@@ -29,141 +29,90 @@ components:
       type: object
       required: [username, email, password, orgName]
       properties:
-        username:
-          type: string
-        email:
-          type: string
-        password:
-          type: string
-        orgName:
-          type: string
-        orgDescription:
-          type: string
+        username: { type: string }
+        email: { type: string }
+        password: { type: string }
+        orgName: { type: string }
+        orgDescription: { type: string }
     RegisterResponse:
       type: object
       properties:
-        user:
-          $ref: '#/components/schemas/User'
-        token:
-          type: string
+        user: { $ref: '#/components/schemas/User' }
+        token: { type: string }
     LoginRequest:
       type: object
       required: [email, password]
       properties:
-        email:
-          type: string
-        password:
-          type: string
+        email: { type: string }
+        password: { type: string }
     LoginResponse:
       type: object
       properties:
-        user:
-          $ref: '#/components/schemas/User'
-        token:
-          type: string
+        user: { $ref: '#/components/schemas/User' }
+        token: { type: string }
     User:
       type: object
       properties:
-        _id:
-          type: string
-        username:
-          type: string
-        email:
-          type: string
-        orgId:
-          type: string
-        role:
-          type: string
+        _id: { type: string }
+        username: { type: string }
+        email: { type: string }
+        orgId: { type: string }
+        role: { type: string }
     Organization:
       type: object
       properties:
-        _id:
-          type: string
-        name:
-          type: string
-        description:
-          type: string
+        _id: { type: string }
+        name: { type: string }
+        description: { type: string }
     Job:
       type: object
       properties:
-        _id:
-          type: string
-        userId:
-          type: string
-        orgId:
-          type: string
-        name:
-          type: string
-        type:
-          type: string
-          enum: [http, shell]
-        schedule:
-          type: string
-        payload:
-          type: object
-        enabled:
-          type: boolean
-        retryLimit:
-          type: integer
-        webhookUrl:
-          type: string
+        _id: { type: string }
+        userId: { type: string }
+        orgId: { type: string }
+        name: { type: string }
+        type: { type: string, enum: [http, shell] }
+        schedule: { type: string }
+        payload: { type: object }
+        enabled: { type: boolean }
+        retryLimit: { type: integer }
+        webhookUrl: { type: string }
         dependsOn:
           type: array
-          items:
-            type: string
-        createdAt:
-          type: string
-        updatedAt:
-          type: string
+          items: { type: string }
+        createdAt: { type: string }
+        updatedAt: { type: string }
     JobCreateRequest:
       type: object
       required: [name, type, schedule, payload]
       properties:
-        name:
-          type: string
-        type:
-          type: string
-          enum: [http, shell]
-        schedule:
-          type: string
-        payload:
-          type: object
-        enabled:
-          type: boolean
-        retryLimit:
-          type: integer
-        webhookUrl:
-          type: string
+        name: { type: string }
+        type: { type: string, enum: [http, shell] }
+        schedule: { type: string }
+        payload: { type: object }
+        enabled: { type: boolean }
+        retryLimit: { type: integer }
+        webhookUrl: { type: string }
         dependsOn:
           type: array
-          items:
-            type: string
+          items: { type: string }
     JobHistory:
       type: object
       properties:
-        _id:
-          type: string
-        jobId:
-          type: string
-        executedAt:
-          type: string
-        status:
-          type: string
-          enum: [success, failure]
-        output:
-          type: object
-        error:
-          type: object
-        retryCount:
-          type: integer
-        orgId:
-          type: string
+        _id: { type: string }
+        jobId: { type: string }
+        executedAt: { type: string }
+        status: { type: string, enum: [success, failure] }
+        output: { type: object }
+        error: { type: object }
+        retryCount: { type: integer }
+        orgId: { type: string }
 
 security:
   - bearerAuth: []
 
 paths:
-  /register:
+  /users/register:
     post:
       tags: [Auth]
       summary: Register a new user and organization
@@ -171,19 +120,17 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/RegisterRequest'
+            schema: { $ref: '#/components/schemas/RegisterRequest' }
       responses:
         '201':
           description: User registered
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/RegisterResponse'
+              schema: { $ref: '#/components/schemas/RegisterResponse' }
         '400':
           description: Bad request
 
-  /login:
+  /users/login:
     post:
       tags: [Auth]
       summary: Login and get JWT token
@@ -191,19 +138,36 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/LoginRequest'
+            schema: { $ref: '#/components/schemas/LoginRequest' }
       responses:
         '200':
           description: Login success
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/LoginResponse'
+              schema: { $ref: '#/components/schemas/LoginResponse' }
         '401':
           description: Unauthorized
 
-  /jobs:
+  /jobs/createJob:
+    post:
+      tags: [Jobs]
+      summary: Create a new job
+      security: [ { bearerAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JobCreateRequest' }
+      responses:
+        '201':
+          description: Job created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Job' }
+        '400':
+          description: Bad request
+
+  /jobs/getJobs:
     get:
       tags: [Jobs]
       summary: List all jobs for user's organization
@@ -215,29 +179,9 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/Job'
-    post:
-      tags: [Jobs]
-      summary: Create a new job
-      security: [ { bearerAuth: [] } ]
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/JobCreateRequest'
-      responses:
-        '201':
-          description: Job created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Job'
-        '400':
-          description: Bad request
+                items: { $ref: '#/components/schemas/Job' }
 
-  /jobs/{jobId}:
+  /jobs/getJobById/{jobId}:
     get:
       tags: [Jobs]
       summary: Get job by ID
@@ -245,18 +189,18 @@ paths:
       parameters:
         - in: path
           name: jobId
-          schema:
-            type: string
+          schema: { type: string }
           required: true
       responses:
         '200':
           description: Job detail
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Job'
+              schema: { $ref: '#/components/schemas/Job' }
         '404':
           description: Not found
+
+  /jobs/updateJob/{jobId}:
     put:
       tags: [Jobs]
       summary: Update a job by ID
@@ -264,26 +208,25 @@ paths:
       parameters:
         - in: path
           name: jobId
-          schema:
-            type: string
+          schema: { type: string }
           required: true
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/JobCreateRequest'
+            schema: { $ref: '#/components/schemas/JobCreateRequest' }
       responses:
         '200':
           description: Job updated
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/Job'
+              schema: { $ref: '#/components/schemas/Job' }
         '400':
           description: Bad request
         '404':
           description: Not found
+
+  /jobs/deleteJob/{jobId}:
     delete:
       tags: [Jobs]
       summary: Delete a job by ID
@@ -291,8 +234,7 @@ paths:
       parameters:
         - in: path
           name: jobId
-          schema:
-            type: string
+          schema: { type: string }
           required: true
       responses:
         '200':
@@ -300,43 +242,21 @@ paths:
         '404':
           description: Not found
 
-  /jobs/{jobId}/toggle:
-    post:
+  /jobs/toggleJobStatus/{jobId}:
+    patch:
       tags: [Jobs]
       summary: Toggle (enable/disable) a job
       security: [ { bearerAuth: [] } ]
       parameters:
         - in: path
           name: jobId
-          schema:
-            type: string
+          schema: { type: string }
           required: true
       responses:
         '200':
           description: Job toggled
         '404':
           description: Not found
-
-  /jobs/{jobId}/history:
-    get:
-      tags: [Jobs]
-      summary: Get execution history for a job
-      security: [ { bearerAuth: [] } ]
-      parameters:
-        - in: path
-          name: jobId
-          schema:
-            type: string
-          required: true
-      responses:
-        '200':
-          description: Execution history
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/JobHistory'
 
   /admin/health:
     get:
@@ -351,20 +271,14 @@ paths:
               schema:
                 type: object
                 properties:
-                  status:
-                    type: string
-                  uptime:
-                    type: number
-                  dbConnected:
-                    type: boolean
-                  dbState:
-                    type: integer
-                  userCount:
-                    type: integer
-                  timestamp:
-                    type: string
+                  status: { type: string }
+                  uptime: { type: number }
+                  dbConnected: { type: boolean }
+                  dbState: { type: integer }
+                  userCount: { type: integer }
+                  timestamp: { type: string }
 
-  /admin/stats/jobs:
+  /admin/job-stats:
     get:
       tags: [Admin]
       summary: Get job statistics (admin only)
@@ -377,27 +291,20 @@ paths:
               schema:
                 type: object
                 properties:
-                  totalJobs:
-                    type: integer
+                  totalJobs: { type: integer }
                   jobsByOrg:
                     type: array
                     items:
                       type: object
                       properties:
-                        orgId:
-                          type: string
-                        orgName:
-                          type: string
-                        count:
-                          type: integer
-                  enabledJobs:
-                    type: integer
-                  disabledJobs:
-                    type: integer
-                  jobsRunLast24h:
-                    type: integer
+                        orgId: { type: string }
+                        orgName: { type: string }
+                        count: { type: integer }
+                  enabledJobs: { type: integer }
+                  disabledJobs: { type: integer }
+                  jobsRunLast24h: { type: integer }
 
-  /admin/stats/users:
+  /admin/user-stats:
     get:
       tags: [Admin]
       summary: Get user statistics (admin only)
@@ -410,23 +317,18 @@ paths:
               schema:
                 type: object
                 properties:
-                  totalUsers:
-                    type: integer
+                  totalUsers: { type: integer }
                   users:
                     type: array
                     items:
                       type: object
                       properties:
-                        username:
-                          type: string
-                        email:
-                          type: string
-                        orgId:
-                          type: string
-                        jobCount:
-                          type: integer
+                        username: { type: string }
+                        email: { type: string }
+                        orgId: { type: string }
+                        jobCount: { type: integer }
 
-  /admin/jobs:
+  /admin/all-jobs:
     get:
       tags: [Admin]
       summary: Get all jobs in the system (admin only)
@@ -438,10 +340,9 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/Job'
+                items: { $ref: '#/components/schemas/Job' }
 
-  /admin/users:
+  /admin/all-users:
     get:
       tags: [Admin]
       summary: Get all users in the system (admin only)
@@ -453,5 +354,4 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  $ref: '#/components/schemas/User'
+                items: { $ref: '#/components/schemas/User' }
